@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocabWeb - Image Recognition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #0F172A;
+            color: #E2E8F0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #F59E0B;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94A3B8;
+            margin-bottom: 3rem;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            background: #1E293B;
+            border: 3px dashed #334155;
+            border-radius: 1rem;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone.dragover {
+            border-color: #F59E0B;
+            background: #1E293B;
+            transform: scale(1.02);
+        }
+
+        .upload-zone.has-image {
+            padding: 2rem;
+        }
+
+        @keyframes borderPulse {
+            0%, 100% { border-color: #334155; }
+            50% { border-color: #475569; }
+        }
+
+        .upload-zone:not(.has-image):not(.analyzing) {
+            animation: borderPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .camera-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: iconPulse 2s ease-in-out infinite;
+        }
+
+        .upload-text {
+            font-size: 1.25rem;
+            color: #CBD5E1;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-hint {
+            color: #64748B;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Image Preview */
+        .image-preview {
+            display: none;
+            position: relative;
+            max-width: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .image-preview.visible {
+            display: block;
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 0.5rem;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Scanning Animation */
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(400px); }
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #F59E0B, transparent);
+            box-shadow: 0 0 20px #F59E0B;
+            animation: scan 2s ease-in-out infinite;
+            display: none;
+        }
+
+        .analyzing .scan-line {
+            display: block;
+        }
+
+        .analyzing-text {
+            display: none;
+            text-align: center;
+            color: #F59E0B;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            font-weight: 500;
+        }
+
+        .analyzing .analyzing-text {
+            display: block;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .analyzing-text::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            display: none;
+            margin-top: 3rem;
+        }
+
+        .results-panel.visible {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #F59E0B;
+            margin-bottom: 1rem;
+        }
+
+        .extracted-text {
+            background: #1E293B;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        .highlight {
+            background: rgba(245, 158, 11, 0.2);
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            color: #FCD34D;
+        }
+
+        /* Word Chips */
+        .words-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .toggle-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .toggle-btn {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94A3B8;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn:hover {
+            border-color: #F59E0B;
+            color: #F59E0B;
+        }
+
+        .words-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .word-chip {
+            background: #1E293B;
+            border: 2px solid #334155;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        .word-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .word-chip.selected {
+            border-color: currentColor;
+            background: rgba(245, 158, 11, 0.1);
+            transform: scale(1.05);
+        }
+
+        .word-chip.level-easy {
+            color: #10B981;
+        }
+
+        .word-chip.level-medium {
+            color: #F59E0B;
+        }
+
+        .word-chip.level-hard {
+            color: #EF4444;
+        }
+
+        .word-text {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .word-def {
+            font-size: 0.85rem;
+            color: #94A3B8;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cefr-badge {
+            background: currentColor;
+            color: #0F172A;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Word Detail Popup */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .popup-overlay.visible {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .popup {
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: transparent;
+            border: none;
+            color: #94A3B8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .popup-close:hover {
+            background: #334155;
+            color: #F59E0B;
+        }
+
+        .popup-word {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: #F59E0B;
+            margin-bottom: 0.5rem;
+        }
+
+        .popup-phonetic {
+            color: #94A3B8;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+
+        .popup-definition {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .popup-example {
+            background: #0F172A;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 3px solid #F59E0B;
+            font-style: italic;
+            color: #CBD5E1;
+        }
+
+        .popup-label {
+            font-size: 0.85rem;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            background: #1E293B;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .word-count {
+            font-size: 1.1rem;
+            color: #CBD5E1;
+        }
+
+        .word-count strong {
+            color: #F59E0B;
+            font-size: 1.5rem;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            border: none;
+            color: #0F172A;
+            padding: 0.75rem 2rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .add-btn:active {
+            transform: translateY(0);
+        }
+
+        /* History */
+        .history-section {
+            margin-top: 4rem;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .history-item {
+            background: #1E293B;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .history-item:hover {
+            border-color: #F59E0B;
+            transform: translateY(-4px);
+        }
+
+        .history-thumb {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .history-info {
+            padding: 0.75rem;
+        }
+
+        .history-date {
+            font-size: 0.85rem;
+            color: #64748B;
+        }
+
+        .history-count {
+            font-size: 0.9rem;
+            color: #F59E0B;
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .upload-zone {
+                padding: 3rem 1rem;
+            }
+
+            .word-chip {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .action-bar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>VocabWeb</h1>
+        <p class="subtitle">Extract vocabulary from images instantly</p>
+
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="uploadZone">
+            <div class="upload-content">
+                <div class="camera-icon">📷</div>
+                <div class="upload-text">Drop an image here or click to browse</div>
+                <div class="upload-hint">You can also paste from clipboard (Ctrl/Cmd + V)</div>
+            </div>
+            <div class="image-preview" id="imagePreview">
+                <img src="" alt="Preview" class="preview-img" id="previewImg">
+                <div class="scan-line"></div>
+            </div>
+            <div class="analyzing-text">Analyzing image</div>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <!-- Results Panel -->
+        <div class="results-panel" id="resultsPanel">
+            <h2 class="section-title">Extracted Text</h2>
+            <div class="extracted-text" id="extractedText"></div>
+
+            <div class="words-header">
+                <h2 class="section-title" style="margin-bottom: 0;">New Words Found</h2>
+                <div class="toggle-buttons">
+                    <button class="toggle-btn" id="selectAllBtn">Select All</button>
+                    <button class="toggle-btn" id="deselectAllBtn">Deselect All</button>
+                </div>
+            </div>
+
+            <div class="words-container" id="wordsContainer"></div>
+
+            <div class="action-bar">
+                <div class="word-count">
+                    <strong id="selectedCount">0</strong> words selected
+                </div>
+                <button class="add-btn" id="addBtn">Add to My Vocabulary</button>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <h2 class="section-title">Recent Sessions</h2>
+            <div class="history-grid" id="historyGrid"></div>
+        </div>
+    </div>
+
+    <!-- Word Detail Popup -->
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup">
+            <button class="popup-close" id="popupClose">×</button>
+            <h3 class="popup-word" id="popupWord"></h3>
+            <div class="popup-phonetic" id="popupPhonetic"></div>
+            <div class="popup-label">Definition</div>
+            <div class="popup-definition" id="popupDefinition"></div>
+            <div class="popup-label">Example</div>
+            <div class="popup-example" id="popupExample"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for demonstration
+        const mockWords = [
+            { word: 'ephemeral', definition: 'lasting for a very short time', phonetic: '/ɪˈfem.ər.əl/', cefr: 'C2', level: 'hard', example: 'The beauty of cherry blossoms is ephemeral, lasting only a few weeks.' },
+            { word: 'serendipity', definition: 'finding something good by accident', phonetic: '/ˌser.ənˈdɪp.ə.ti/', cefr: 'C1', level: 'hard', example: 'It was pure serendipity that we met at the coffee shop.' },
+            { word: 'ubiquitous', definition: 'present everywhere', phonetic: '/juːˈbɪk.wɪ.təs/', cefr: 'C1', level: 'hard', example: 'Smartphones have become ubiquitous in modern society.' },
+            { word: 'ambiguous', definition: 'having more than one meaning', phonetic: '/æmˈbɪɡ.ju.əs/', cefr: 'B2', level: 'medium', example: 'The politician gave an ambiguous answer to avoid controversy.' },
+            { word: 'resilient', definition: 'able to recover quickly', phonetic: '/rɪˈzɪl.i.ənt/', cefr: 'B2', level: 'medium', example: 'Children are remarkably resilient after difficult experiences.' },
+            { word: 'pragmatic', definition: 'practical and realistic', phonetic: '/præɡˈmæt.ɪk/', cefr: 'B2', level: 'medium', example: 'We need a pragmatic approach to solve this problem.' },
+            { word: 'diligent', definition: 'showing care and effort', phonetic: '/ˈdɪl.ɪ.dʒənt/', cefr: 'B1', level: 'easy', example: 'She was a diligent student who always completed her homework.' },
+            { word: 'adequate', definition: 'enough or satisfactory', phonetic: '/ˈæd.ɪ.kwət/', cefr: 'B1', level: 'easy', example: 'The salary is adequate for living in this city.' },
+        ];
+
+        const mockText = 'In the ephemeral moments of dawn, serendipity often reveals itself. The ubiquitous nature of modern technology has made communication less ambiguous. Resilient individuals adopt a pragmatic approach, remaining diligent in their efforts to achieve adequate results.';
+
+        // State
+        let selectedWords = new Set();
+        let currentWords = [];
+        let historyItems = [];
+
+        // Elements
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const resultsPanel = document.getElementById('resultsPanel');
+        const extractedText = document.getElementById('extractedText');
+        const wordsContainer = document.getElementById('wordsContainer');
+        const selectedCount = document.getElementById('selectedCount');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const deselectAllBtn = document.getElementById('deselectAllBtn');
+        const addBtn = document.getElementById('addBtn');
+        const popupOverlay = document.getElementById('popupOverlay');
+        const popupClose = document.getElementById('popupClose');
+        const historyGrid = document.getElementById('historyGrid');
+
+        // Upload Zone Events
+        uploadZone.addEventListener('click', () => {
+            if (!uploadZone.classList.contains('analyzing')) {
+                fileInput.click();
+            }
+        });
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImageUpload(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageUpload(file);
+            }
+        });
+
+        // Paste from clipboard
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    handleImageUpload(file);
+                    break;
+                }
+            }
+        });
+
+        function handleImageUpload(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                imagePreview.classList.add('visible');
+                uploadZone.classList.add('has-image', 'analyzing');
+                
+                // Simulate OCR processing
+                setTimeout(() => {
+                    uploadZone.classList.remove('analyzing');
+                    showResults();
+                    saveToHistory(e.target.result);
+                }, 3000);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showResults() {
+            // Display extracted text with highlights
+            let highlightedText = mockText;
+            mockWords.forEach(word => {
+                const regex = new RegExp(`\\b${word.word}\\b`, 'gi');
+                highlightedText = highlightedText.replace(regex, `<span class="highlight">${word.word}</span>`);
+            });
+            extractedText.innerHTML = highlightedText;
+
+            // Display word chips
+            currentWords = [...mockWords];
+            selectedWords = new Set(mockWords.map(w => w.word));
+            renderWords();
+
+            resultsPanel.classList.add('visible');
+            updateSelectedCount();
+        }
+
+        function renderWords() {
+            wordsContainer.innerHTML = '';
+            currentWords.forEach(word => {
+                const chip = document.createElement('div');
+                chip.className = `word-chip level-${word.level} ${selectedWords.has(word.word) ? 'selected' : ''}`;
+                chip.innerHTML = `
+                    <div>
+                        <div class="word-text">${word.word}</div>
+                        <div class="word-def">${word.definition}</div>
+                    </div>
+                    <span class="cefr-badge">${word.cefr}</span>
+                `;
+                
+                chip.addEventListener('click', (e) => {
+                    if (e.target.closest('.word-chip') === chip) {
+                        if (selectedWords.has(word.word)) {
+                            selectedWords.delete(word.word);
+                            chip.classList.remove('selected');
+                        } else {
+                            selectedWords.add(word.word);
+                            chip.classList.add('selected');
+                        }
+                        updateSelectedCount();
+                    }
+                });
+
+                // Show detail popup on double click
+                chip.addEventListener('dblclick', () => {
+                    showWordDetail(word);
+                });
+
+                wordsContainer.appendChild(chip);
+            });
+        }
+
+        function updateSelectedCount() {
+            selectedCount.textContent = selectedWords.size;
+        }
+
+        selectAllBtn.addEventListener('click', () => {
+            selectedWords = new Set(currentWords.map(w => w.word));
+            renderWords();
+            updateSelectedCount();
+        });
+
+        deselectAllBtn.addEventListener('click', () => {
+            selectedWords.clear();
+            renderWords();
+            updateSelectedCount();
+        });
+
+        addBtn.addEventListener('click', () => {
+            if (selectedWords.size > 0) {
+                alert(`Added ${selectedWords.size} words to your vocabulary!`);
+                // Here you would send the data to your backend
+            }
+        });
+
+        function showWordDetail(word) {
+            document.getElementById('popupWord').textContent = word.word;
+            document.getElementById('popupPhonetic').textContent = word.phonetic;
+            document.getElementById('popupDefinition').textContent = word.definition;
+            document.getElementById('popupExample').textContent = word.example;
+            popupOverlay.classList.add('visible');
+        }
+
+        popupClose.addEventListener('click', () => {
+            popupOverlay.classList.remove('visible');
+        });
+
+        popupOverlay.addEventListener('click', (e) => {
+            if (e.target === popupOverlay) {
+                popupOverlay.classList.remove('visible');
+            }
+        });
+
+        // History
+        function saveToHistory(imageSrc) {
+            const item = {
+                id: Date.now(),
+                image: imageSrc,
+                date: new Date().toLocaleDateString(),
+                wordCount: mockWords.length
+            };
+            historyItems.unshift(item);
+            if (historyItems.length > 6) historyItems.pop();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            historyGrid.innerHTML = '';
+            historyItems.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <img src="${item.image}" alt="Session" class="history-thumb">
+                    <div class="history-info">
+                        <div class="history-date">${item.date}</div>
+                        <div class="history-count">${item.wordCount} words</div>
+                    </div>
+                `;
+                historyItem.addEventListener('click', () => {
+                    // Load this session
+                    previewImg.src = item.image;
+                    imagePreview.classList.add('visible');
+                    uploadZone.classList.add('has-image');
+                    showResults();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+                historyGrid.appendChild(historyItem);
+            });
+        }
+
+        // Initialize with empty history
+        renderHistory();
+    </script>
+</body>
+</html>

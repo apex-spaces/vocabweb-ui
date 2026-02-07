@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocabWeb - Review Session</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #0F172A;
+            color: #E2E8F0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 2rem;
+            min-height: 100vh;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            grid-column: 1 / -1;
+            margin-bottom: 1rem;
+        }
+
+        .progress-text {
+            font-size: 0.875rem;
+            color: #94A3B8;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #1E293B;
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10B981 0%, #34D399 100%);
+            border-radius: 999px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
+        }
+
+        /* Flashcard Container */
+        .flashcard-container {
+            perspective: 1500px;
+            width: 100%;
+            max-width: 700px;
+            margin-bottom: 2rem;
+        }
+
+        .flashcard {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            transform-style: preserve-3d;
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard.slide-out-left {
+            animation: slideOutLeft 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+
+        .flashcard.slide-in-right {
+            animation: slideInRight 0.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes slideOutLeft {
+            to {
+                transform: translateX(-120%) rotateY(20deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(120%) rotateY(-20deg);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0) rotateY(0);
+                opacity: 1;
+            }
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 24px;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border: 2px solid #334155;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card-face.new-word {
+            border-color: #F59E0B;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 158, 11, 0.15);
+        }
+
+        .card-face.mastered {
+            border-color: #10B981;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(16, 185, 129, 0.15);
+        }
+
+        .card-front {
+            z-index: 2;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        .word-main {
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            font-weight: 700;
+            color: #F1F5F9;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .phonetic {
+            font-size: 1.5rem;
+            color: #94A3B8;
+            margin-bottom: 1.5rem;
+            font-weight: 400;
+        }
+
+        .audio-icon {
+            width: 56px;
+            height: 56px;
+            background: #334155;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .audio-icon:hover {
+            background: #475569;
+            transform: scale(1.1);
+        }
+
+        .audio-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: #E2E8F0;
+        }
+
+        .definition {
+            font-size: 2rem;
+            color: #F1F5F9;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .part-of-speech {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: #334155;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: #94A3B8;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .example {
+            font-size: 1.125rem;
+            color: #CBD5E1;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .context {
+            font-size: 0.875rem;
+            color: #64748B;
+            padding: 0.75rem 1.25rem;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            border-left: 3px solid #475569;
+        }
+
+        .flip-hint {
+            position: absolute;
+            bottom: 1.5rem;
+            font-size: 0.875rem;
+            color: #64748B;
+            opacity: 0.7;
+        }
+
+        /* Rating Buttons */
+        .rating-buttons {
+            display: flex;
+            gap: 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .rating-buttons.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .rating-btn {
+            flex: 1;
+            padding: 1.25rem 2rem;
+            border: none;
+            border-radius: 16px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rating-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .rating-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .rating-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .rating-btn.forgot {
+            background: #DC2626;
+            color: white;
+        }
+
+        .rating-btn.forgot:hover {
+            background: #B91C1C;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4);
+        }
+
+        .rating-btn.partial {
+            background: #F59E0B;
+            color: white;
+        }
+
+        .rating-btn.partial:hover {
+            background: #D97706;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+        }
+
+        .rating-btn.knew {
+            background: #10B981;
+            color: white;
+        }
+
+        .rating-btn.knew:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+        }
+
+        .shortcut-hint {
+            display: block;
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        /* Stats Sidebar */
+        .stats-sidebar {
+            background: #1E293B;
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid #334155;
+        }
+
+        .stats-section {
+            margin-bottom: 2rem;
+        }
+
+        .stats-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .stats-title {
+            font-size: 0.875rem;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #CBD5E1;
+        }
+
+        .stat-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #F1F5F9;
+        }
+
+        .stat-value.success {
+            color: #10B981;
+        }
+
+        .stat-value.warning {
+            color: #F59E0B;
+        }
+
+        .stat-value.danger {
+            color: #DC2626;
+        }
+
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .risk-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .risk-dot.low {
+            background: #10B981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .risk-dot.medium {
+            background: #F59E0B;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+
+        .risk-dot.high {
+            background: #DC2626;
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+        }
+
+        .risk-text {
+            font-size: 0.875rem;
+            color: #CBD5E1;
+        }
+
+        .next-review-preview {
+            margin-top: 1rem;
+        }
+
+        .review-option {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .review-option-label {
+            color: #94A3B8;
+        }
+
+        .review-option-date {
+            color: #E2E8F0;
+            font-weight: 600;
+        }
+
+        /* Completion Screen */
+        .completion-screen {
+            display: none;
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .completion-screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .completion-icon {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .completion-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: #F1F5F9;
+            margin-bottom: 1rem;
+        }
+
+        .completion-subtitle {
+            font-size: 1.25rem;
+            color: #94A3B8;
+            margin-bottom: 3rem;
+        }
+
+        .completion-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            max-width: 800px;
+            margin: 0 auto 3rem;
+        }
+
+        .completion-stat {
+            background: #1E293B;
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid #334155;
+        }
+
+        .completion-stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #10B981;
+            margin-bottom: 0.5rem;
+        }
+
+        .completion-stat-label {
+            font-size: 0.875rem;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .streak-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            border-radius: 12px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .continue-btn {
+            padding: 1.25rem 3rem;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .continue-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #10B981;
+            position: absolute;
+            animation: confetti-fall 3s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-sidebar {
+                order: 3;
+            }
+
+            .main-content {
+                order: 2;
+            }
+
+            .progress-section {
+                order: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .word-main {
+                font-size: 3rem;
+            }
+
+            .phonetic {
+                font-size: 1.25rem;
+            }
+
+            .definition {
+                font-size: 1.5rem;
+            }
+
+            .flashcard {
+                height: 400px;
+            }
+
+            .card-face {
+                padding: 2rem;
+            }
+
+            .rating-buttons {
+                flex-direction: column;
+            }
+
+            .rating-btn {
+                width: 100%;
+            }
+
+            .completion-title {
+                font-size: 2rem;
+            }
+
+            .completion-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress-section">
+            <div class="progress-text">
+                <span id="progress-current">0</span> / <span id="progress-total">0</span> words reviewed
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="flashcard-container">
+                <div class="flashcard" id="flashcard">
+                    <!-- Front of Card -->
+                    <div class="card-face card-front" id="card-front">
+                        <div class="word-main" id="word-front"></div>
+                        <div class="phonetic" id="phonetic"></div>
+                        <div class="audio-icon" id="audio-btn">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                        </div>
+                        <div class="flip-hint">Click or press Space to flip</div>
+                    </div>
+
+                    <!-- Back of Card -->
+                    <div class="card-face card-back" id="card-back">
+                        <div class="definition" id="definition"></div>
+                        <div class="part-of-speech" id="part-of-speech"></div>
+                        <div class="example" id="example"></div>
+                        <div class="context" id="context"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rating Buttons -->
+            <div class="rating-buttons" id="rating-buttons">
+                <button class="rating-btn forgot" data-rating="forgot">
+                    <span>不认识<span class="shortcut-hint">Press 1</span></span>
+                </button>
+                <button class="rating-btn partial" data-rating="partial">
+                    <span>模糊<span class="shortcut-hint">Press 2</span></span>
+                </button>
+                <button class="rating-btn knew" data-rating="knew">
+                    <span>认识<span class="shortcut-hint">Press 3</span></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Sidebar -->
+        <div class="stats-sidebar">
+            <div class="stats-section">
+                <div class="stats-title">Session Stats</div>
+                <div class="stat-item">
+                    <span class="stat-label">Correct Rate</span>
+                    <span class="stat-value success" id="correct-rate">0%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Time Elapsed</span>
+                    <span class="stat-value" id="time-elapsed">0:00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Words Left</span>
+                    <span class="stat-value" id="words-left">0</span>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-title">Current Word</div>
+                <div class="risk-indicator">
+                    <div class="risk-dot" id="risk-dot"></div>
+                    <div class="risk-text" id="risk-text">Forgetting risk: Low</div>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-title">Next Review</div>
+                <div class="next-review-preview">
+                    <div class="review-option">
+                        <span class="review-option-label">不认识</span>
+                        <span class="review-option-date" id="review-forgot">10 min</span>
+                    </div>
+                    <div class="review-option">
+                        <span class="review-option-label">模糊</span>
+                        <span class="review-option-date" id="review-partial">1 day</span>
+                    </div>
+                    <div class="review-option">
+                        <span class="review-option-label">认识</span>
+                        <span class="review-option-date" id="review-knew">4 days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div class="completion-screen" id="completion-screen">
+            <div class="completion-icon">🎉</div>
+            <h1 class="completion-title">Session Complete!</h1>
+            <p class="completion-subtitle">Great work on your vocabulary review</p>
+            
+            <div class="streak-badge">
+                🔥 <span id="streak-count">7</span> Day Streak
+            </div>
+
+            <div class="completion-stats">
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="final-correct-rate">0%</div>
+                    <div class="completion-stat-label">Correct Rate</div>
+                </div>
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="final-words-reviewed">0</div>
+                    <div class="completion-stat-label">Words Reviewed</div>
+                </div>
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="final-time">0:00</div>
+                    <div class="completion-stat-label">Time Spent</div>
+                </div>
+            </div>
+
+            <button class="continue-btn" onclick="location.reload()">Start New Session</button>
+        </div>
+    </div>
+
+    <script>
+        // Sample vocabulary data
+        const vocabularyData = [
+            {
+                word: "Ephemeral",
+                phonetic: "/ɪˈfem.ər.əl/",
+                definition: "短暂的；瞬息的",
+                partOfSpeech: "adjective",
+                example: "The beauty of cherry blossoms is ephemeral, lasting only a few weeks.",
+                context: "Collected from: Nature article",
+                risk: "medium",
+                reviewIntervals: { forgot: "10 min", partial: "1 day", knew: "4 days" }
+            },
+            {
+                word: "Serendipity",
+                phonetic: "/ˌser.ənˈdɪp.ə.ti/",
+                definition: "意外发现珍奇事物的本领；机缘巧合",
+                partOfSpeech: "noun",
+                example: "Finding this café was pure serendipity.",
+                context: "Collected from: Travel blog",
+                risk: "low",
+                reviewIntervals: { forgot: "10 min", partial: "2 days", knew: "7 days" }
+            },
+            {
+                word: "Ubiquitous",
+                phonetic: "/juːˈbɪk.wɪ.təs/",
+                definition: "无处不在的；普遍存在的",
+                partOfSpeech: "adjective",
+                example: "Smartphones have become ubiquitous in modern society.",
+                context: "Collected from: Tech news",
+                risk: "high",
+                reviewIntervals: { forgot: "5 min", partial: "12 hours", knew: "2 days" }
+            },
+            {
+                word: "Ameliorate",
+                phonetic: "/əˈmiː.li.ə.reɪt/",
+                definition: "改善；改良",
+                partOfSpeech: "verb",
+                example: "The new policy aims to ameliorate working conditions.",
+                context: "Collected from: Business report",
+                risk: "medium",
+                reviewIntervals: { forgot: "10 min", partial: "1 day", knew: "5 days" }
+            },
+            {
+                word: "Paradigm",
+                phonetic: "/ˈpær.ə.daɪm/",
+                definition: "范例；典范；模式",
+                partOfSpeech: "noun",
+                example: "The discovery represented a paradigm shift in physics.",
+                context: "Collected from: Science journal",
+                risk: "low",
+                reviewIntervals: { forgot: "10 min", partial: "2 days", knew: "8 days" }
+            }
+        ];
+
+        // State management
+        let currentIndex = 0;
+        let isFlipped = false;
+        let reviewedWords = 0;
+        let correctCount = 0;
+        let startTime = Date.now();
+        let timerInterval;
+
+        // DOM elements
+        const flashcard = document.getElementById('flashcard');
+        const cardFront = document.getElementById('card-front');
+        const cardBack = document.getElementById('card-back');
+        const ratingButtons = document.getElementById('rating-buttons');
+        const progressFill = document.getElementById('progress-fill');
+        const progressCurrent = document.getElementById('progress-current');
+        const progressTotal = document.getElementById('progress-total');
+        const completionScreen = document.getElementById('completion-screen');
+
+        // Initialize
+        function init() {
+            progressTotal.textContent = vocabularyData.length;
+            loadWord(currentIndex);
+            startTimer();
+            updateStats();
+        }
+
+        // Load word data into card
+        function loadWord(index) {
+            const word = vocabularyData[index];
+            
+            // Front of card
+            document.getElementById('word-front').textContent = word.word;
+            document.getElementById('phonetic').textContent = word.phonetic;
+            
+            // Back of card
+            document.getElementById('definition').textContent = word.definition;
+            document.getElementById('part-of-speech').textContent = word.partOfSpeech;
+            document.getElementById('example').textContent = word.example;
+            document.getElementById('context').textContent = word.context;
+            
+            // Update card styling based on risk
+            cardFront.className = 'card-face card-front';
+            cardBack.className = 'card-face card-back';
+            
+            if (word.risk === 'high') {
+                cardFront.classList.add('new-word');
+                cardBack.classList.add('new-word');
+            } else if (word.risk === 'low') {
+                cardFront.classList.add('mastered');
+                cardBack.classList.add('mastered');
+            }
+            
+            // Update risk indicator
+            updateRiskIndicator(word.risk);
+            
+            // Update review intervals
+            document.getElementById('review-forgot').textContent = word.reviewIntervals.forgot;
+            document.getElementById('review-partial').textContent = word.reviewIntervals.partial;
+            document.getElementById('review-knew').textContent = word.reviewIntervals.knew;
+            
+            // Reset flip state
+            isFlipped = false;
+            flashcard.classList.remove('flipped');
+            ratingButtons.classList.remove('visible');
+        }
+
+        // Flip card
+        function flipCard() {
+            if (!isFlipped) {
+                flashcard.classList.add('flipped');
+                isFlipped = true;
+                setTimeout(() => {
+                    ratingButtons.classList.add('visible');
+                }, 400);
+            }
+        }
+
+        // Handle rating
+        function handleRating(rating) {
+            if (!isFlipped) return;
+            
+            reviewedWords++;
+            if (rating === 'knew') {
+                correctCount++;
+            }
+            
+            // Slide out animation
+            flashcard.classList.add('slide-out-left');
+            ratingButtons.classList.remove('visible');
+            
+            setTimeout(() => {
+                currentIndex++;
+                
+                if (currentIndex >= vocabularyData.length) {
+                    showCompletion();
+                } else {
+                    flashcard.classList.remove('slide-out-left');
+                    flashcard.classList.add('slide-in-right');
+                    loadWord(currentIndex);
+                    updateProgress();
+                    updateStats();
+                    
+                    setTimeout(() => {
+                        flashcard.classList.remove('slide-in-right');
+                    }, 500);
+                }
+            }, 400);
+        }
+
+        // Update progress bar
+        function updateProgress() {
+            const percentage = (reviewedWords / vocabularyData.length) * 100;
+            progressFill.style.width = percentage + '%';
+            progressCurrent.textContent = reviewedWords;
+        }
+
+        // Update stats
+        function updateStats() {
+            const correctRate = reviewedWords > 0 ? Math.round((correctCount / reviewedWords) * 100) : 0;
+            document.getElementById('correct-rate').textContent = correctRate + '%';
+            document.getElementById('correct-rate').className = 'stat-value ' + 
+                (correctRate >= 80 ? 'success' : correctRate >= 60 ? 'warning' : 'danger');
+            
+            document.getElementById('words-left').textContent = vocabularyData.length - reviewedWords;
+        }
+
+        // Update risk indicator
+        function updateRiskIndicator(risk) {
+            const riskDot = document.getElementById('risk-dot');
+            const riskText = document.getElementById('risk-text');
+            
+            riskDot.className = 'risk-dot ' + risk;
+            
+            const riskLabels = {
+                low: 'Low - Well mastered',
+                medium: 'Medium - Needs review',
+                high: 'High - New word'
+            };
+            
+            riskText.textContent = 'Forgetting risk: ' + riskLabels[risk];
+        }
+
+        // Timer
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('time-elapsed').textContent = 
+                    minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            }, 1000);
+        }
+
+        // Show completion screen
+        function showCompletion() {
+            clearInterval(timerInterval);
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            const timeStr = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            
+            const correctRate = Math.round((correctCount / reviewedWords) * 100);
+            
+            document.getElementById('final-correct-rate').textContent = correctRate + '%';
+            document.getElementById('final-words-reviewed').textContent = reviewedWords;
+            document.getElementById('final-time').textContent = timeStr;
+            
+            document.querySelector('.main-content').style.display = 'none';
+            document.querySelector('.stats-sidebar').style.display = 'none';
+            completionScreen.classList.add('active');
+            
+            createConfetti();
+        }
+
+        // Create confetti animation
+        function createConfetti() {
+            const colors = ['#10B981', '#F59E0B', '#3B82F6', '#EC4899', '#8B5CF6'];
+            const confettiCount = 50;
+            
+            for (let i = 0; i < confettiCount; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
+            }
+        }
+
+        // Event listeners
+        flashcard.addEventListener('click', flipCard);
+        
+        document.getElementById('audio-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Placeholder for audio playback
+            console.log('Playing audio for:', vocabularyData[currentIndex].word);
+        });
+
+        document.querySelectorAll('.rating-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const rating = e.currentTarget.dataset.rating;
+                handleRating(rating);
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                flipCard();
+            } else if (e.code === 'Digit1' && isFlipped) {
+                handleRating('forgot');
+            } else if (e.code === 'Digit2' && isFlipped) {
+                handleRating('partial');
+            } else if (e.code === 'Digit3' && isFlipped) {
+                handleRating('knew');
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
